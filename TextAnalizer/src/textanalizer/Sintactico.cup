@@ -1,0 +1,111 @@
+package textanalizer;
+import java_cup.runtime.*;
+import static textanalizer.TextAnalizer.erroresSintacticos;
+import static textanalizer.TextAnalizer.erroresSemanticos;
+
+parser code {:
+    
+        
+    /**Metodo al que se llama automáticamente ante algún error sintactico.*/
+    public void syntax_error(Symbol s){
+        erroresSintacticos.insertarError(String.valueOf(s.value),Integer.toString(s.left+1),Integer.toString(s.right+1), "Error Recuperable,verifique la sintaxis"); 
+    }
+
+    /**Metodo al que se llama en el momento en que ya no es posible una recuperación de
+    errores.*/
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception{
+        erroresSintacticos.insertarError(String.valueOf(s.value),Integer.toString(s.left+1), Integer.toString(s.right+1), "Error Fatal,verifique la sintaxis");
+    }
+
+:}
+
+action code {:
+   //aca las variables que se utilizan en el aanalisis sintactico 
+:}
+
+init with {:
+    
+:}
+
+terminal Proyecto,Var,printer,contexto,varref,igual;
+terminal par_abre,par_cierra,llav_abre,llav_cierra,mas,menos,divide,multi,coma,pycoma,raiz,potencia;
+terminal String cadena,numero,decimal,id,titulo;
+non terminal INI,CUERPO,CUERPO2,DEC1,DEC2,PAR,PAR2;
+non terminal String OPE;
+
+precedence left mas, menos;
+precedence left divide, multi;
+precedence left raiz, potencia;
+
+
+start with INI;
+
+INI::=Proyecto titulo llav_abre CUERPO llav_cierra
+|error
+;
+
+CUERPO::= CUERPO DEC1
+|DEC1
+;
+
+DEC1::= Var id igual OPE pycoma 
+|contexto titulo llav_abre CUERPO2 llav_cierra
+|printer par_abre id par_cierra pycoma
+;
+
+
+
+CUERPO2::=CUERPO2 DEC2
+|DEC2
+|error
+;
+
+DEC2::= Var id igual OPE pycoma
+|varref llav_abre PAR coma PAR2 llav_cierra pycoma
+|printer par_abre id par_cierra pycoma
+;
+
+
+PAR ::= cadena
+|id
+;
+
+PAR2 ::= cadena
+|numero
+|id
+;
+
+OPE::= OPE:a mas OPE:b {: 
+    int val1 = Integer.parseInt(a);
+    int val2= Integer.parseInt(b);
+    int res=val1+val2;
+    RESULT= (res)+"";
+:}
+
+| OPE:a menos OPE:b {: 
+    int val1 = Integer.parseInt(a);
+    int val2= Integer.parseInt(b);
+    int res=val1-val2;
+    RESULT= (res)+"";
+    :}
+| OPE:a divide OPE:b {: 
+    int val1 = Integer.parseInt(a);
+    int val2= Integer.parseInt(b);
+    int res=val1/val2;
+    RESULT= (res)+"";
+    :}
+
+| OPE:a multi OPE:b {:
+    int val1 = Integer.parseInt(a);
+    int val2= Integer.parseInt(b);
+    int res=val1*val2;
+    RESULT= (res)+"";
+    :}
+| raiz par_abre OPE:na par_cierra {: RESULT=na;:}
+| potencia par_abre OPE:na1 coma OPE:na2 par_cierra
+| par_abre OPE:na par_cierra {: RESULT=na;:}
+| numero:na {:RESULT=na;:}
+| decimal:de {:RESULT=de;:}
+| id
+| cadena
+;
